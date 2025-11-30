@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國中單字速讀挑戰賽 - L1到L6完整版</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --wrong-color: #f44336;
+            --timer-color: #FF9800;
+            --bg-level-1: #E3F2FD; /* 淺藍 */
+            --bg-level-2: #E8F5E9; /* 淺綠 */
+            --bg-level-3: #FFF3E0; /* 淺橘 */
+            --bg-level-4: #F3E5F5; /* 淺紫 */
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-level-1);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.5s ease;
+            user-select: none;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 { color: #333; margin: 10px 0; font-size: 1.8rem; }
+
+        /* 頂部資訊列 */
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #333; /* 已調整為深色 */
+            font-size: 0.9rem;
+        }
+
+        .score-box, .high-score-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .big-num { font-size: 1.2rem; color: #2196F3; }
+        .high-score-num { color: #FF9800; }
+
+        /* 倒數計時條 */
+        .timer-container {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timer-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--timer-color);
+            transition: width 0.1s linear;
+        }
+
+        .word-display {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #2c3e50;
+            margin: 20px 0;
+            min-height: 60px;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 15px;
+            font-size: 1.3rem;
+            border: 3px solid #ddd;
+            border-radius: 12px;
+            outline: none;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        input[type="text"]:focus { border-color: var(--primary-color); }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #388E3C; 
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .feedback {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            min-height: 1.5em;
+            font-weight: bold;
+        }
+
+        .combo-badge {
+            display: inline-block;
+            background: #FF5722;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s;
+        }
+        
+        .combo-active { opacity: 1; transform: scale(1); }
+
+        /* 動畫 */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        .shake-anim { animation: shake 0.4s ease-in-out; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="info-panel">
+        <div class="score-box">
+            <span>得分</span>
+            <span class="big-num" id="score">0</span>
+        </div>
+        <div class="score-box">
+            <span>Level</span>
+            <span class="big-num" id="level-num">1</span>
+        </div>
+        <div class="high-score-box">
+            <span>👑 最高紀錄</span>
+            <span class="big-num high-score-num" id="high-score">0</span>
+        </div>
+    </div>
+
+    <div class="timer-container">
+        <div class="timer-bar" id="timer-bar"></div>
+    </div>
+
+    <div class="word-display" id="question-word">Press Start</div>
+    
+    <div style="height: 20px;">
+        <span id="combo-display" class="combo-badge">Combo x2!</span>
+    </div>
+
+    <input type="text" id="answer-input" placeholder="輸入英文..." autocomplete="off" disabled>
+    
+    <button class="btn" id="submit-btn" onclick="startGame()">開始挑戰</button>
+
+    <div class="feedback" id="feedback-msg"></div>
+</div>
+
+<script>
+    // --- 國中英語(三)單字庫 (L1-L6) 共 145 個單字 ---
+    const vocabularyList = [
+        // L1: Dialogue, Word Power, Reading
+        { ch: "昨天", en: "yesterday" },
+        { ch: "研讀", en: "studies" },
+        { ch: "慢跑", en: "jogging" },
+        { ch: "觀看", en: "watches" },
+        { ch: "上次的", en: "last" },
+        { ch: "死亡", en: "death" },
+        { ch: "一些、少許", en: "a few" },
+        { ch: "以前", en: "ago" },
+        { ch: "父母", en: "parents" },
+        { ch: "是 (過去式複數)", en: "were" },
+        { ch: "是 (過去式單數)", en: "was" },
+        { ch: "必須", en: "must" },
+        { ch: "過世", en: "passed away" },
+        { ch: "一起", en: "together" },
+        { ch: "貼心的、甜美的", en: "sweet" },
+        { ch: "使...想起", en: "remind; of" },
+        { ch: "回憶", en: "memory" },
+        { ch: "打扮", en: "dressing up" },
+        { ch: "音樂", en: "music" },
+        { ch: "圓圈", en: "circle" },
+        { ch: "種植", en: "planted" },
+        { ch: "花朵", en: "flowers" },
+        { ch: "蠟燭", en: "candles" },
+        { ch: "墳墓", en: "tombs" },
+        { ch: "記得", en: "remember" },
+        { ch: "死掉的", en: "dead" },
+        { ch: "親戚", en: "relatives" },
+        { ch: "鬼魂", en: "ghost" },
+        { ch: "晚點、之後", en: "later" },
+        { ch: "糖果", en: "candy" },
+        { ch: "餐點", en: "meals" },
+        { ch: "分享", en: "share" },
+        { ch: "故事", en: "story" },
+        { ch: "打掃", en: "sweeping" },
+        { ch: "有活力的", en: "lively" },
+        { ch: "感人的", en: "touching" },
+        { ch: "恐懼", en: "fear" },
+
+        // L2: Dialogue, Word Power, Reading
+        { ch: "數學", en: "math" },
+        { ch: "考試", en: "tests" },
+        { ch: "猜", en: "Guess" },
+        { ch: "嗯、這個嘛", en: "Well" },
+        { ch: "結婚", en: "got married" },
+        { ch: "為什麼", en: "Why" },
+        { ch: "賣", en: "sell" },
+        { ch: "因為", en: "because" },
+        { ch: "貧窮的", en: "poor" },
+        { ch: "發生", en: "happened" },
+        { ch: "打到", en: "hit" },
+        { ch: "糟糕的", en: "terrible" },
+        { ch: "曾經", en: "ever" },
+        { ch: "完成", en: "finishes" },
+        { ch: "再也不", en: "not; anymore" },
+        { ch: "好奇的", en: "curious" },
+        { ch: "結局", en: "ending" },
+        { ch: "鞋子", en: "shoes" },
+        { ch: "買", en: "buy" },
+        { ch: "一雙", en: "pair" },
+        { ch: "採摘", en: "picked" },
+        { ch: "巧克力", en: "Chocolate" },
+        { ch: "打破", en: "break" },
+        { ch: "手臂、懷抱", en: "arms" },
+        { ch: "電腦", en: "computer" },
+        { ch: "選擇", en: "choose" },
+        { ch: "小孩", en: "children" },
+        { ch: "年紀", en: "age" },
+        { ch: "沒有", en: "without" },
+        { ch: "嬰兒", en: "baby" },
+        { ch: "變成", en: "became" },
+        { ch: "哭了", en: "cried" },
+        { ch: "沒有人", en: "Nobody" },
+        { ch: "害怕的", en: "scared" },
+        { ch: "採取行動", en: "take action" },
+        { ch: "婚姻", en: "marriage" },
+
+        // L3: Reading, Word Power
+        { ch: "國王", en: "king" },
+        { ch: "道路", en: "way" },
+        { ch: "濕的", en: "wet" },
+        { ch: "泥土", en: "mud" },
+        { ch: "深的", en: "deep" },
+        { ch: "在...旁邊", en: "beside" },
+        { ch: "在...之前", en: "before" },
+        { ch: "困難的", en: "difficult" },
+        { ch: "蝴蝶", en: "butterflies" },
+        { ch: "大笑", en: "laughing" },
+        { ch: "可能的", en: "possible" },
+        { ch: "經過", en: "passed by" },
+        { ch: "攀爬", en: "climbing" },
+        { ch: "底部", en: "bottom" },
+        { ch: "死亡", en: "die" },
+        { ch: "疲倦的", en: "tired" },
+        { ch: "終於", en: "finally" },
+        { ch: "抵達", en: "arrive" },
+        { ch: "驚訝的", en: "surprised" },
+        { ch: "蛇", en: "snake" },
+        { ch: "打字", en: "type" },
+        { ch: "手機", en: "cellphone" },
+        { ch: "聽見", en: "hear" },
+        { ch: "蟾蜍", en: "toad" },
+        { ch: "突然地", en: "suddenly" },
+        { ch: "洞", en: "hole" },
+        { ch: "無助的", en: "helpless" },
+        { ch: "訊息", en: "message" },
+        { ch: "聾的", en: "deaf" },
+        { ch: "蝙蝠", en: "bats" },
+        { ch: "狐狸", en: "foxes" },
+        { ch: "老鼠", en: "rat" },
+        { ch: "母雞", en: "hens" },
+
+        // L4: Dialogue, Word Power, Reading
+        { ch: "表兄弟姐妹", en: "cousins" },
+        { ch: "工作", en: "job" },
+        { ch: "作為", en: "as" },
+        { ch: "男服務生", en: "waiter" },
+        { ch: "居住", en: "live" },
+        { ch: "經驗", en: "experience" },
+        { ch: "空氣", en: "air" },
+        { ch: "新鮮的", en: "fresh" },
+        { ch: "海龜", en: "sea turtle" },
+        { ch: "海灘", en: "beach" },
+        { ch: "想要", en: "want" },
+        { ch: "應該", en: "should" },
+        { ch: "準備", en: "prepares" },
+        { ch: "持續", en: "kept" },
+        { ch: "練習", en: "practices" },
+        { ch: "重要的", en: "important" },
+        { ch: "學習", en: "learned" },
+        { ch: "令人驚訝的", en: "amazing" },
+        { ch: "珊瑚礁", en: "coral reefs" },
+        { ch: "農場", en: "farm" },
+        { ch: "工人", en: "worker" },
+        { ch: "女服務生", en: "waitress" },
+        { ch: "工廠", en: "factories" },
+        { ch: "推銷員", en: "salesman" },
+        { ch: "漁夫", en: "fisherman" },
+        { ch: "友善的", en: "friendly" },
+        { ch: "生長", en: "grow" },
+        { ch: "理解", en: "understand" },
+        { ch: "離開", en: "leave" },
+        { ch: "衝浪", en: "surfing" },
+        { ch: "玩帆船", en: "sailing" },
+        { ch: "露營", en: "camped" },
+        { ch: "開始", en: "begins" },
+        { ch: "結束", en: "ended" },
+        { ch: "希望", en: "hope" },
+        { ch: "不快樂的", en: "unhappy" },
+        { ch: "文化", en: "culture" },
+        { ch: "進步", en: "progress" },
+        { ch: "口音", en: "accent" },
+
+        // L5: Dialogue, Word Power, Reading
+        { ch: "照片", en: "photos" },
+        { ch: "當然", en: "Of course" },
+        { ch: "花費 (過去式)", en: "cost" },
+        { ch: "美元、元", en: "dollars" },
+        { ch: "寄送 (過去式)", en: "sent" },
+        { ch: "包裹", en: "package" },
+        { ch: "付費 (過去式)", en: "paid" },
+        { ch: "價格", en: "prices" },
+        { ch: "低的", en: "low" },
+        { ch: "花費 (時間/金錢)", en: "spend" },
+        { ch: "分 (錢幣單位)", en: "cents" },
+        { ch: "便宜的", en: "cheap" },
+        { ch: "擔心", en: "worry" },
+        { ch: "雨傘", en: "umbrella" },
+        { ch: "方便的", en: "convenient" },
+        { ch: "遙遠的", en: "far" },
+        { ch: "廁所", en: "restroom" },
+        { ch: "城鎮", en: "town" },
+        { ch: "便利商店", en: "convenience store" },
+        { ch: "列印 (過去式)", en: "printed" },
+        { ch: "停留", en: "stay" },
+        { ch: "百貨公司", en: "department store" },
+        { ch: "祈禱", en: "prays" },
+        { ch: "寺廟", en: "Temple" },
+        { ch: "外國人", en: "foreigners" },
+        { ch: "想到", en: "think of" },
+        { ch: "遊客", en: "visitors" },
+        { ch: "外國的", en: "foreign" },
+        { ch: "抵達 (過去式)", en: "reached" },
+        { ch: "昂貴的", en: "expensive" },
+        { ch: "城市", en: "city" },
+        { ch: "舒服的", en: "comfortable" },
+        { ch: "一點點", en: "little" },
+        { ch: "大部分的", en: "Most" },
+        { ch: "某人", en: "Someone" },
+        { ch: "幫我一下", en: "lend me a hand" },
+        { ch: "富有的、豐富的", en: "rich" },
+        { ch: "以...為榮", en: "are; proud of" },
+        { ch: "無尾熊", en: "koala" },
+        { ch: "景色", en: "scenery" },
+        { ch: "旅行", en: "traveling" },
+        { ch: "任何地方", en: "anywhere" },
+        { ch: "此外", en: "Besides" },
+
+        // L6: Dialogue, Word Power, Reading
+        { ch: "簡單的", en: "simple" },
+        { ch: "網路", en: "Internet" },
+        { ch: "它自己", en: "itself" },
+        { ch: "實際上", en: "actually" },
+        { ch: "夢想", en: "dream" },
+        { ch: "自己的", en: "own" },
+        { ch: "歌手的", en: "singer’s" },
+        { ch: "未來", en: "future" },
+        { ch: "有趣的", en: "interesting" },
+        { ch: "實現", en: "come true" },
+        { ch: "今晚", en: "tonight" },
+        { ch: "叔叔、舅舅", en: "uncle" },
+        { ch: "披薩", en: "pizza" },
+        { ch: "漢堡", en: "hamburgers" },
+        { ch: "晚餐", en: "dinner" },
+        { ch: "製造", en: "creates" },
+        { ch: "歌詞", en: "lyrics" },
+        { ch: "旋律", en: "melody" },
+        { ch: "虛擬的", en: "virtual" },
+        { ch: "數位的", en: "digital" },
+        { ch: "燈", en: "lamp" },
+        { ch: "吉他", en: "guitar" },
+        { ch: "小提琴", en: "Violins" },
+        { ch: "蜂蜜", en: "honey" },
+        { ch: "沙發", en: "couch" },
+        { ch: "公寓", en: "apartment" },
+        { ch: "城堡", en: "castle" },
+        { ch: "地震", en: "earthquake" },
+        { ch: "颱風", en: "typhoons" },
+        { ch: "出生", en: "born" },
+        { ch: "成功的", en: "successful" },
+        { ch: "失敗", en: "failed" },
+        { ch: "訂單", en: "order" },
+        { ch: "領導者", en: "leader" },
+        { ch: "心臟", en: "heart" },
+        { ch: "忘記", en: "forgets" },
+        { ch: "教訓", en: "lessons" },
+        { ch: "情況、案例", en: "case" },
+        { ch: "小心的", en: "careful" },
+        { ch: "現代的", en: "modern" },
+        { ch: "開車", en: "drive" },
+        { ch: "他們自己", en: "themselves" },
+        { ch: "塑造、形狀", en: "shape" },
+        { ch: "科技", en: "technology" },
+        { ch: "大學", en: "college" },
+        { ch: "公司", en: "company" },
+        { ch: "完成", en: "complete" }
+    ];
+
+    // --- 遊戲邏輯 (與計時器/連擊系統綁定) ---
+
+    let currentLevel = 1;
+    let score = 0;
+    let highScore = localStorage.getItem('vocabGameHighScore') || 0;
+    let currentWordObj = null;
+    let combo = 0;
+    let isGameRunning = false;
+    
+    // 計時器變數
+    let timerInterval;
+    const timePerQuestion = 15;
+    let timeLeft = timePerQuestion;
+
+    // --- DOM ---
+    const questionEl = document.getElementById('question-word');
+    const inputEl = document.getElementById('answer-input');
+    const feedbackEl = document.getElementById('feedback-msg');
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('high-score');
+    const levelEl = document.getElementById('level-num');
+    const timerBar = document.getElementById('timer-bar');
+    const btnEl = document.getElementById('submit-btn');
+    const comboEl = document.getElementById('combo-display');
+    const bodyEl = document.body;
+
+    // 初始化畫面
+    highScoreEl.textContent = highScore;
+    
+    inputEl.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && isGameRunning) {
+            checkAnswer();
+        }
+    });
+
+    function startGame() {
+        isGameRunning = true;
+        score = 0;
+        currentLevel = 1;
+        combo = 0;
+        updateUI();
+        inputEl.disabled = false;
+        btnEl.onclick = checkAnswer;
+        btnEl.textContent = "送出";
+        bodyEl.style.backgroundColor = 'var(--bg-level-1)'; // 重設背景色
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        inputEl.value = "";
+        inputEl.focus();
+        feedbackEl.textContent = "";
+        btnEl.textContent = "送出";
+        btnEl.onclick = checkAnswer;
+        
+        currentWordObj = vocabularyList[Math.floor(Math.random() * vocabularyList.length)];
+        questionEl.textContent = currentWordObj.ch;
+        
+        startTimer();
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        // 等級越高時間越短，最少 5 秒
+        timeLeft = Math.max(5, timePerQuestion - Math.floor(currentLevel / 2)); 
+        let totalTime = timeLeft;
+        
+        updateTimerBar(100);
+
+        timerInterval = setInterval(() => {
+            timeLeft -= 0.1;
+            let percentage = (timeLeft / totalTime) * 100;
+            updateTimerBar(percentage);
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeOut();
+            }
+        }, 100);
+    }
+
+    function updateTimerBar(percent) {
+        timerBar.style.width = percent + '%';
+        if(percent < 30) timerBar.style.background = '#f44336';
+        else timerBar.style.background = '#FF9800';
+    }
+
+    function checkAnswer() {
+        if (!isGameRunning) return;
+        clearInterval(timerInterval);
+        const userAnswer = inputEl.value.trim().toLowerCase();
+        const correctAnswer = currentWordObj.en.toLowerCase();
+
+        if (userAnswer === correctAnswer) {
+            handleCorrect();
+        } else {
+            handleWrong(correctAnswer);
+        }
+    }
+
+    function handleCorrect() {
+        combo++;
+        let timeBonus = Math.floor(timeLeft);
+        let points = 10 + (combo * 2) + timeBonus;
+        score += points;
+
+        feedbackEl.textContent = `答對了！+${points} 分`;
+        feedbackEl.style.color = "green";
+        
+        if(combo > 1) {
+            comboEl.textContent = `🔥 Combo x${combo}!`;
+            comboEl.classList.add('combo-active');
+        }
+
+        updateUI();
+        checkLevelUp();
+        setTimeout(() => {
+            comboEl.classList.remove('combo-active');
+            nextQuestion();
+        }, 800);
+    }
+
+    function handleWrong(correctAnswer) {
+        combo = 0;
+        feedbackEl.innerHTML = `錯囉！答案是: <span style="color:blue">${correctAnswer}</span>`;
+        feedbackEl.style.color = "red";
+        
+        inputEl.classList.add('shake-anim');
+        setTimeout(() => inputEl.classList.remove('shake-anim'), 400);
+
+        btnEl.textContent = "下一題 (按 Enter)";
+        btnEl.onclick = nextQuestion;
+    }
+
+    function handleTimeOut() {
+        combo = 0;
+        feedbackEl.innerHTML = `⏰ 時間到！答案是: ${currentWordObj.en}`;
+        feedbackEl.style.color = "red";
+        
+        // 確保按鈕在時間到時能繼續
+        btnEl.textContent = "下一題 (按 Enter)";
+        btnEl.onclick = nextQuestion;
+    }
+
+    function checkLevelUp() {
+        // 每 100 分升一級
+        let newLevel = Math.floor(score / 100) + 1;
+        if (newLevel > currentLevel) {
+            currentLevel = newLevel;
+            
+            feedbackEl.textContent = `恭喜升上 Level ${currentLevel}！ 🚀`;
+            
+            const colors = ['var(--bg-level-1)', 'var(--bg-level-2)', 'var(--bg-level-3)', 'var(--bg-level-4)'];
+            bodyEl.style.backgroundColor = colors[(currentLevel - 1) % 4];
+        }
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('vocabGameHighScore', highScore);
+            highScoreEl.textContent = highScore;
+            highScoreEl.style.color = 'red';
+        }
+    }
+
+    function updateUI() {
+        scoreEl.textContent = score;
+        levelEl.textContent = currentLevel;
+    }
+
+</script>
+
+</body>
+</html>
